@@ -10,7 +10,7 @@ using namespace std;
 /* thread statuses*/
 #define RUNNING_WITH_LOCK	1; //thread runs and does not need lock
 #define RUNNING_NO_LOCK		2; //threads runs and is waiting for lock
-#define TERMINATE 			3; //thread terminated
+#define TERMINATE 		3; //thread terminated
 
 int (*original_pthread_create)(pthread_t*, const pthread_attr_t*, void* (*)(void*), void*) = NULL;
 int (*original_pthread_join)(pthread_t, void**) = NULL;
@@ -18,13 +18,22 @@ int (*original_pthread_mutex_unlock)(pthread_mutex_t*) = NULL;
 int (*original_pthread_mutex_lock)(pthread_mutex_t*) = NULL;
 
 static pthread_mutex_t	globalLock = PTHREAD_MUTEX_INITIALIZER; //global lock
-static pthread_t		current = 0;
+static pthread_t	current = 0;
 
+
+// PART 2
+static int		total_sync_point = 0;
+static int		current_sync_point = 1;
 
 static map<pthread_mutex_t*, pthread_t> mutexMap; //maps mutex lock to its value
 static map<pthread_t, int> threadMap; //maps thread to its status
 
 static void initialize_original_functions();
+
+static void performSyncPointCheck();
+static bool isFirstExecution();
+static int getCurrentSyncPoint();
+
 
 struct Thread_Arg {
     void* (*start_routine)(void*);
@@ -52,6 +61,13 @@ void* thread_main(void *arg)
 	
     original_pthread_mutex_unlock(&globalLock);
 
+    /*PART 2*/
+    
+    // outputs the total synchronization points to the file syncpoints
+    FILE *output = fopen("syncpoints.txt","w");
+    fprintf(output,"%d\n",total_sync_point);
+    fclose(output);
+    
     return ret;
 }
 
@@ -65,11 +81,14 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     thread_arg->start_routine = start_routine;
     thread_arg->arg = arg;
 	
-	// global lock is locked now (first instance of create a new thread)
-	original_pthread_mutex_lock(&globalLock);
+    // global lock is locked now (first instance of create a new thread)
+    original_pthread_mutex_lock(&globalLock);
 	
     int ret = original_pthread_create(thread, attr, thread_main, thread_arg);
-    
+	
+    // PART2 sync point - after a thread is created
+    performSyncPointCheck();
+	
     return ret;
 }
 
@@ -122,12 +141,18 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 		
 		original_pthread_mutex_lock(&globalLock);	
 		
+		// PART2 sync point - before mutex is locked
+		performSyncPointCheck();
+		
 		// lock the mutex and change status of thread
 		mutexMap[mutex] = current;
 		threadMap[current] = RUNNING_WITH_LOCK;
 	}
 	else
 	{
+		// PART2 sync point - before mutex is locked
+		performSyncPointCheck();
+		
 		current = pthread_self();
 		mutexMap[mutex] = current;
 		threadMap[current] = RUNNING_WITH_LOCK;	
@@ -144,7 +169,11 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 	// if L belongs to current thread, then UNLOCK(L)
 	if (pthread_equal(mutexMap[mutex],pthread_self()) != 0)
 		mutexMap[mutex] = 0;
-    
+		
+   	// PART2 sync point - after mutex is released
+	performSyncPointCheck();
+	
+	
     return original_pthread_mutex_unlock(mutex);
 }
 
@@ -192,4 +221,43 @@ void initialize_original_functions()
         original_pthread_mutex_unlock =
             (int (*)(pthread_mutex_t*))dlsym(RTLD_NEXT, "pthread_mutex_unlock");
     }
+}
+
+static
+void performSyncPointCheck()
+{
+	// if its the first execution
+	if (isFirstExecution())
+	{
+		// keep track of synchronization point
+		total_sync_point++;	
+	}
+	else
+	{
+		if (getCurrentSyncPoint() == current_sync_point)
+		{
+			sched_yield();
+		}
+		current_sync_point++;			
+	}
+}
+
+// checks if the current execution is the first execution
+static bool isFirstExecution()
+{
+	int temp;
+	FILE *f = fopen("syncpoints.txt","r");
+	fscanf(f,"%d",&temp);
+	fclose(f);
+	if (temp == 0) return true;
+	else return false;
+}
+
+static int getCurrentSyncPoint()
+{
+	int temp;
+	FILE *f = fopen("nth-thread.txt","r");
+	fscanf(f,"%d",&temp);
+	fclose(f);
+	return temp;	
 }
