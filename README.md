@@ -11,7 +11,7 @@ Su Lin Ooi
 TODO:
 1. scheduling is wrong.
 
-For Part 2,\n
-1. Go into runner.c and change all ./sample2 to whichever file to test.\n
-2. Then run make to compile.\n
+For Part 2,
+1. Go into runner.c and change all ./sample2 to whichever file to test.
+2. Then run make to compile.
 3. Call ./runner to execute the program.
