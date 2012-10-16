@@ -12,7 +12,7 @@ int main()
 	
 	// run sample the first time to get the total synchronization points
 	int n = runSample();
-	printf("n is %d\n",n);
+	//printf("n is %d\n",n);
 	runSampleNTimes(n);
 }
 
@@ -44,14 +44,14 @@ int runSample()
 // TODO change the sample file name here
 void runSampleNTimes(int n)
 {
-	printf("here\n");
 	int i;
-	
-	FILE *f = fopen("nth-thread.txt","w");
 	for (i = 1 ; i <= n ; i++) 
 	{
-		system("./run.sh ./sample1");
+		FILE *f = fopen("nth-thread.txt","w");
 		fprintf(f,"%d",i);
+		fclose(f);
+		system("./run.sh ./sample1");
+	//	printf("@i = %d\n\n",i);
+	//	system("cat nth-thread.txt");
 	}
-	fclose(f);
 }

@@ -10,4 +10,8 @@ Su Lin Ooi
 
 TODO:
 1. scheduling is wrong.
-2. not getting the n out of main.
+
+For Part 2,
+1. Go into runner.c and change all ./sample2 to whichever file to test.
+2. Then run make to compile.
+3. Call ./runner to execute the program.

@@ -63,6 +63,7 @@ void* thread_main(void *arg)
 
     /*PART 2*/
     
+    //TODO
     // outputs the total synchronization points to the file syncpoints
     FILE *output = fopen("syncpoints.txt","w");
     fprintf(output,"%d\n",total_sync_point);
@@ -98,6 +99,8 @@ int pthread_join(pthread_t joinee, void **retval)
     initialize_original_functions();
 	original_pthread_mutex_unlock(&globalLock);
 	
+	
+	
 	/* select next available thread to execute */
 	/* wait till joinee terminates */
 	int x = TERMINATE;
@@ -106,6 +109,7 @@ int pthread_join(pthread_t joinee, void **retval)
 		current = joinee;
 	
 
+	fprintf(stderr,"stuck in thread join :(\n");
 	while(threadMap[joinee] != x) {}
 	
 	original_pthread_mutex_lock(&globalLock);	
@@ -149,11 +153,10 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 		threadMap[current] = RUNNING_WITH_LOCK;
 	}
 	else
-	{
+	{		
+		current = pthread_self();
 		// PART2 sync point - before mutex is locked
 		performSyncPointCheck();
-		
-		current = pthread_self();
 		mutexMap[mutex] = current;
 		threadMap[current] = RUNNING_WITH_LOCK;	
 	}
@@ -167,19 +170,20 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     initialize_original_functions();
 	
 	// if L belongs to current thread, then UNLOCK(L)
-	if (pthread_equal(mutexMap[mutex],pthread_self()) != 0)
+	if (pthread_equal(mutexMap[mutex],pthread_self()) != 0) {
 		mutexMap[mutex] = 0;
 		
-   	// PART2 sync point - after mutex is released
-	performSyncPointCheck();
-	
-	
+		// PART2 sync point - after mutex is released
+		performSyncPointCheck();
+	}
     return original_pthread_mutex_unlock(mutex);
 }
 
 extern "C"
 int sched_yield(void)
 {
+	
+	fprintf(stderr,"in yield\n");
 	original_pthread_mutex_unlock(&globalLock);
 
 	// select next available thread to execute
@@ -234,8 +238,9 @@ void performSyncPointCheck()
 	}
 	else
 	{
-		if (getCurrentSyncPoint() == current_sync_point)
-		{
+		printf("%d\n", current_sync_point);
+		printf("getcurrentsnycpoint() %d\n",getCurrentSyncPoint());	
+		if (getCurrentSyncPoint() == current_sync_point) {
 			sched_yield();
 		}
 		current_sync_point++;			
