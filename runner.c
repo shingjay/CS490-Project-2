@@ -20,6 +20,8 @@ void initializeFiles()
 {
 	FILE *f1 = fopen("syncpoints.txt","w");
 	FILE *f2 = fopen("nth-thread.txt","w");
+
+	system("touch results.txt");
 	
 	fprintf(f1,"%d\n",0);
 	fprintf(f2,"%d\n",1);
@@ -32,11 +34,13 @@ void initializeFiles()
 // TODO change the sample file name here
 int runSample()
 {
-	system("./run.sh ./sample1");
+	system("./run.sh ./sample2");
 	int temp;
 	FILE *f1 = fopen("syncpoints.txt","r");
 	fscanf(f1,"%d",&temp);
 	fclose(f1);
+	//printf("points is \n");
+	system("cat syncpoints.txt");
 	return temp;
 }
 
@@ -44,14 +48,23 @@ int runSample()
 // TODO change the sample file name here
 void runSampleNTimes(int n)
 {
+	//fprintf(stderr, "n is  %d\n\n", n);
 	int i;
+	FILE *outputfile = fopen("results.txt","a+");	
 	for (i = 1 ; i <= n ; i++) 
 	{
+		fprintf(stderr, "iteration number %d\n", i);
+		
 		FILE *f = fopen("nth-thread.txt","w");
 		fprintf(f,"%d",i);
 		fclose(f);
-		system("./run.sh ./sample1");
+		int result = system("./run.sh ./sample2");
+		//fprintf(stderr,"result = %d\n", result);
+
+
+		fprintf(outputfile,"%d\n",result);
 	//	printf("@i = %d\n\n",i);
 	//	system("cat nth-thread.txt");
 	}
+	fclose(outputfile);
 }
